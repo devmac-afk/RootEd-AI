@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Desmos Component</title>
+  <!-- Load the external Desmos script in the head -->
+  <script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+  <style>
+    /* Ensure body and html take up full height */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+    #calculator {
+      width: 100%;
+      height: 100%;
+      min-height: 500px; /* Set a minimum height */
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- This div is where the calculator will be placed -->
+  <div id="calculator"></div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      console.log("DOM fully loaded. Initializing Desmos component.");
+
+      try {
+        const elt = document.getElementById('calculator');
+        const calculator = Desmos.GraphingCalculator(elt);
+        console.log("Desmos calculator object created successfully.");
+
+        function onMessageHandler(event) {
+          if (event.source !== window.parent) return;
+
+          const message = event.data;
+          if (message.type === "streamlit:render") {
+            const equations = message.args.latex; // The data is now named 'latex'
+            console.log("Received render event with data:", equations);
+
+            // --- START OF NEW LOGIC ---
+            calculator.setBlank(); // Clear previous expressions
+
+            if (Array.isArray(equations)) {
+              // If we received an array, loop through it
+              equations.forEach((eq, index) => {
+                if (eq) { // Make sure the equation is not null/empty
+                  calculator.setExpression({ id: `graph${index}`, latex: eq });
+                }
+              });
+            } else if (equations) {
+              // If it's a single string (for backward compatibility), plot it
+              calculator.setExpression({ id: 'graph1', latex: equations });
+            }
+            // --- END OF NEW LOGIC ---
+            
+            window.parent.postMessage({
+              isStreamlitMessage: true,
+              type: "streamlit:setFrameHeight",
+              height: 510
+            }, "*");
+          }
+        }
+
+        window.addEventListener("message", onMessageHandler);
+        console.log("Message listener attached.");
+
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: "streamlit:componentReady",
+          apiVersion: 1
+        }, "*");
+        console.log("Sent 'streamlit:componentReady' to parent.");
+
+      } catch (e) {
+        console.error("An error occurred during component initialization:", e);
+      }
+    });
+</script>
+</body>
+</html>
