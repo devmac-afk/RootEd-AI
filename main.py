@@ -37,7 +37,7 @@ except ImportError as e:
         import importlib.metadata
         dists = [f"{d.metadata['Name']} ({d.version})" for d in importlib.metadata.distributions()]
         st.write("**Installed Packages:**")
-        st.json(sorted(dists))
+        st.code("\n".join(sorted(dists)))
     except Exception as ex:
         st.write(f"Failed to list packages: {ex}")
         
