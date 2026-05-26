@@ -7,42 +7,11 @@ st.set_page_config(page_title="AI Math Tutor", layout="wide")
 import uuid
 import re
 import os
-import sys
 from typing import List, Optional, Union
-
-try:
-    from langchain_google_genai import ChatGoogleGenerativeAI
-    from langchain.chains import LLMChain
-    from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-    from langchain.memory import ConversationBufferMemory
-except ImportError as e:
-    st.error(f"Initialization Error: {e}")
-    st.markdown("### 🔍 Environment Diagnostics")
-    st.write(f"**Python Version:** {sys.version}")
-    st.write(f"**Current Working Directory:** {os.getcwd()}")
-    
-    st.write("**Python Path (sys.path):**")
-    st.json(sys.path)
-    
-    # Read requirements.txt
-    if os.path.exists("requirements.txt"):
-        st.write("**requirements.txt Contents:**")
-        with open("requirements.txt", "r") as f:
-            st.code(f.read())
-    else:
-        st.write("⚠️ `requirements.txt` not found in root directory!")
-        
-    # List installed packages
-    try:
-        import importlib.metadata
-        dists = [f"{d.metadata['Name']} ({d.version})" for d in importlib.metadata.distributions()]
-        st.write("**Installed Packages:**")
-        st.code("\n".join(sorted(dists)))
-    except Exception as ex:
-        st.write(f"Failed to list packages: {ex}")
-        
-    st.stop()
-
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.chains import LLMChain
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.memory import ConversationBufferMemory
 from dotenv import load_dotenv
 
 from desmos_component import show_desmos
