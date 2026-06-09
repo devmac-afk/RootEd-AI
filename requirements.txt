@@ -3,3 +3,5 @@ supabase
 langchain==0.3.25
 langchain-google-genai==2.0.10
 python-dotenv
+fastapi
+uvicorn
