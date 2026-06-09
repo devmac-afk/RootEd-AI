@@ -112,7 +112,7 @@ const ChatInterface: React.FC = () => {
       const newTabs: Record<number, 'explanation' | 'graph'> = {};
       history.forEach((msg, i) => {
         if (msg.plot_equation) {
-          newTabs[i] = 'explanation';
+          newTabs[i] = 'graph';
         }
       });
       setActiveTab(newTabs);
@@ -142,7 +142,7 @@ const ChatInterface: React.FC = () => {
       setMessages(updatedMessages);
       
       if (response.plot_equations) {
-        setActiveTab(prev => ({ ...prev, [updatedMessages.length - 1]: 'explanation' }));
+        setActiveTab(prev => ({ ...prev, [updatedMessages.length - 1]: 'graph' }));
       }
       
       loadChats();

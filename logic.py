@@ -31,9 +31,15 @@ def generalize_expression_to_function(expression: str) -> Optional[str]:
 
 def convert_to_desmos_syntax(equation: str) -> str:
     # Normalize trig exponent usage like sin^3(x) -> (sin(x))^3 for Desmos
-    pattern = r"(sin|cos|tan|cot|sec|csc)\^([3-9]|\d{2,})\s*\((.*?)\)"
+    pattern = r"(sin|cos|tan|cot|sec|csc)\^([2-9]|\d{2,})\s*\((.*?)\)"
     replacement = r"(\1(\3))^\2"
     eq = re.sub(pattern, replacement, equation)
+    
+    # Ensure trig functions have backslashes for Desmos LaTeX
+    trig_functions = ['sin', 'cos', 'tan', 'cot', 'sec', 'csc', 'arcsin', 'arccos', 'arctan']
+    for func in trig_functions:
+        eq = re.sub(rf"(?<!\\)\b{func}\b", rf"\\{func}", eq)
+
     # Common replacements (sqrt -> \sqrt{}, implicit pi keyword)
     eq = re.sub(r"sqrt\s*\((.*?)\)", r"\\sqrt{\1}", eq, flags=re.IGNORECASE)
     eq = re.sub(r"\bpi\b", r"\\pi", eq, flags=re.IGNORECASE)
@@ -42,26 +48,40 @@ def convert_to_desmos_syntax(equation: str) -> str:
 def extract_plottable_equation(user_query: str) -> Optional[List[str]]:
     original_query = user_query.strip()
 
-    # Definite integral patterns
-    match_A = re.search(r"integrate\s+(.*?)\s+to\s+(.*?)\s+(.*?)\s*d([xytzθ])", original_query, re.IGNORECASE)
+    # 1. Definite integral patterns (Improved)
+    # Check for 'from' pattern first as it's more specific
     match_B = re.search(r"integrate\s+(.*?)\s+from\s+(.*?)\s+to\s+(.*?)\s*d([xytzθ])", original_query, re.IGNORECASE)
-    lower_limit, upper_limit, function_part, integration_variable = None, None, None, None
-    if match_A:
-        lower_limit, upper_limit, function_part, integration_variable = match_A.groups()
-    elif match_B:
+    match_A = re.search(r"integrate\s+(.*?)\s+to\s+(.*?)\s+(.*?)\s*d([xytzθ])", original_query, re.IGNORECASE)
+    
+    function_part, lower_limit, upper_limit, integration_variable = None, None, None, None
+    if match_B:
         function_part, lower_limit, upper_limit, integration_variable = match_B.groups()
+    elif match_A:
+        lower_limit, upper_limit, function_part, integration_variable = match_A.groups()
+        
     if function_part:
         def translate_pi(text):
             return re.sub(r'\b(pi|pie)\b', r'\\pi', text, flags=re.IGNORECASE)
         lower_limit = translate_pi(lower_limit.strip())
         upper_limit = translate_pi(upper_limit.strip())
-        cleaned_function = translate_pi(function_part.strip())
+        cleaned_function = convert_to_desmos_syntax(function_part.strip())
         if integration_variable.lower() == 'θ':
             integration_variable = r'\theta'
-        assignment_variable = 'r' if integration_variable == r'\theta' else 'y'
-        integral_expression = f"\\int_{{{lower_limit}}}^{{{upper_limit}}} ({cleaned_function}) d{integration_variable}"
-        final_equation = f"{assignment_variable} = {integral_expression}"
-        return [final_equation]
+        
+        # Desmos needs specific integral syntax
+        integral_expression = f"\\int_{{{lower_limit}}}^{{{upper_limit}}} {cleaned_function} d{integration_variable}"
+        return [integral_expression]
+
+    # 2. Parametric detection (BEFORE splitting)
+    if 't' in original_query.lower() and 'x' in original_query.lower() and 'y' in original_query.lower():
+        # Match x=... and y=... regardless of semicolon
+        x_match = re.search(r"x\s*=\s*([^;,\n]+)", original_query, re.IGNORECASE)
+        y_match = re.search(r"y\s*=\s*([^;,\n]+)", original_query, re.IGNORECASE)
+        if x_match and y_match:
+            x_val = convert_to_desmos_syntax(x_match.group(1).strip())
+            y_val = convert_to_desmos_syntax(y_match.group(1).strip())
+            # Return individual equations AND the parametric point for plotting
+            return [f"x = {x_val}", f"y = {y_val}", f"({x_val}, {y_val})"]
 
     cleaned_query = re.sub(r"^(solve|plot|graph|what is|can you solve|show)\s*:?\s*", "", original_query, flags=re.IGNORECASE)
     if not cleaned_query:
@@ -70,11 +90,7 @@ def extract_plottable_equation(user_query: str) -> Optional[List[str]]:
     if re.search(r"(dy/dx|y\'|d/dx)", cleaned_query):
         return None
 
-    if 't' in cleaned_query.lower():
-        parametric_match = re.search(r"x\s*=\s*(.*?),?\s*y\s*=\s*(.*)", cleaned_query, re.IGNORECASE)
-        if parametric_match:
-            return [f"({parametric_match.group(1).strip()}, {parametric_match.group(2).strip()})"]
-
+    # Multiple equations split by semicolon or newline
     parts = re.split(r"[;\n]+", cleaned_query)
     equations: List[str] = []
     for part in parts:
