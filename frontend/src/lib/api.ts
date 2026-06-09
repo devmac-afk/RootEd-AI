@@ -1,11 +1,11 @@
 const API_BASE_URL = 'http://localhost:8000/api';
 
-export interface ChatSummary {
+export type ChatSummary = {
   id: string;
   title: string;
 }
 
-export interface ChatTurn {
+export type ChatTurn = {
   user: string;
   bot: string;
   plot_equation?: string | string[];
