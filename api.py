@@ -3,8 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import uuid
+import json
 
-from logic import extract_plottable_equation, get_chain, convert_to_desmos_syntax
+from logic import app as langgraph_app, convert_to_desmos_syntax
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from supabase_client import save_chat, load_chat, delete_chat, get_all_chat_summaries
 
 app = FastAPI()
@@ -31,22 +33,6 @@ class ChatResponse(BaseModel):
     bot_response: str
     plot_equations: Optional[List[str]] = None
 
-# Global dictionary to store LangChain chains per chat session
-# Note: In a production app, you might want to use a more robust session management
-chains = {}
-
-def get_chat_chain(chat_id: str):
-    if chat_id not in chains:
-        chain = get_chain()
-        # Load existing history from Supabase if available
-        history = load_chat(chat_id)
-        for turn in history:
-            if turn.get('user') and turn.get('bot'):
-                chain.memory.chat_memory.add_user_message(turn.get('user'))
-                chain.memory.chat_memory.add_ai_message(turn.get('bot'))
-        chains[chat_id] = chain
-    return chains[chat_id]
-
 @app.get("/api/chats")
 async def get_chats():
     return get_all_chat_summaries()
@@ -59,33 +45,66 @@ async def get_chat_history(chat_id: str):
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat_endpoint(request: ChatRequest):
     try:
-        chain = get_chat_chain(request.chat_id)
-        response = chain.invoke({"question": request.message})
-        bot_response = response.get('text', '').strip()
-        
-        equations_to_plot = extract_plottable_equation(request.message)
-        
-        # Save to Supabase
+        # 1. Load history from Supabase and convert to LangChain messages
         history = load_chat(request.chat_id)
+        messages = []
+        for turn in history:
+            if turn.get('user'):
+                messages.append(HumanMessage(content=turn.get('user')))
+            if turn.get('bot'):
+                # Note: If we want to be very precise, we should reconstruct tool calls here too
+                # but for most history, just the text bot response is enough for context.
+                messages.append(AIMessage(content=turn.get('bot')))
+        
+        # 2. Add the new user message
+        messages.append(HumanMessage(content=request.message))
+        
+        # 3. Invoke LangGraph
+        config = {"configurable": {"thread_id": request.chat_id}}
+        final_state = langgraph_app.invoke({"messages": messages}, config=config)
+        
+        # 4. Extract text response and plot equations
+        # The text response is in the content of the LAST AIMessage
+        # The plot equations are in the tool_calls of ANY of the AIMessages in the final state's turn
+        bot_response = ""
+        plot_equations = []
+        
+        # We iterate backwards to find the final text answer and all tool calls in the last exchange
+        for msg in reversed(final_state['messages']):
+            if isinstance(msg, AIMessage):
+                if not bot_response and msg.content:
+                    bot_response = msg.content
+                if msg.tool_calls:
+                    for tool_call in msg.tool_calls:
+                        if tool_call['name'] == 'plot_graph':
+                            # Apply desmos syntax conversion just in case, 
+                            # though the tool already does it, it's safer to extract fresh
+                            eqs = tool_call['args'].get('equations', [])
+                            plot_equations.extend([convert_to_desmos_syntax(eq) for eq in eqs])
+            
+            # Stop once we hit the user message we just sent
+            if isinstance(msg, HumanMessage) and msg.content == request.message:
+                break
+
+        # 5. Save to Supabase
         history.append({
             "user": request.message,
             "bot": bot_response,
-            "plot_equation": equations_to_plot
+            "plot_equation": plot_equations if plot_equations else None
         })
         save_chat(request.chat_id, history)
         
         return ChatResponse(
             bot_response=bot_response,
-            plot_equations=equations_to_plot
+            plot_equations=plot_equations if plot_equations else None
         )
     except Exception as e:
+        print(f"Error in chat_endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/chats/{chat_id}")
 async def delete_chat_endpoint(chat_id: str):
     delete_chat(chat_id)
-    if chat_id in chains:
-        del chains[chat_id]
     return {"status": "success"}
 
 if __name__ == "__main__":

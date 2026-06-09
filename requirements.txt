@@ -1,7 +1,9 @@
 streamlit
 supabase
-langchain==0.3.25
-langchain-google-genai==2.0.10
+langchain
+langchain-google-genai
+langgraph
 python-dotenv
 fastapi
 uvicorn
+requests
