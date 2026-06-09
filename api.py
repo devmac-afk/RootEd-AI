@@ -11,10 +11,14 @@ from supabase_client import save_chat, load_chat, delete_chat, get_all_chat_summ
 
 app = FastAPI()
 
+import os
+
 # Enable CORS for the Astro frontend
+allowed_origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust this in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
