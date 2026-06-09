@@ -30,7 +30,10 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, message })
     });
-    if (!res.ok) throw new Error('Failed to send message');
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({ detail: 'Unknown error' }));
+      throw new Error(errorData.detail || 'Failed to send message');
+    }
     return res.json();
   },
 

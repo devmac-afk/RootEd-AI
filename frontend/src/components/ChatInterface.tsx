@@ -146,9 +146,13 @@ const ChatInterface: React.FC = () => {
       }
       
       loadChats();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setMessages([...prevMessages, { user: messageToSend, bot: '### ⚠️ [CRITICAL_SYSTEM_ERROR]\n\nLink to RootEd Intelligence Core severed. Check console logs.' }]);
+      const errorMessage = err instanceof Error ? err.message : 'Link to RootEd Intelligence Core severed.';
+      setMessages([...prevMessages, { 
+        user: messageToSend, 
+        bot: `### ⚠️ [SYSTEM_ERROR]\n\n${errorMessage}\n\nCheck console logs or retry in a few moments.` 
+      }]);
     } finally {
       setIsLoading(false);
     }
