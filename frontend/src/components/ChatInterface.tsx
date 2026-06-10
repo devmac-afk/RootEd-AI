@@ -338,7 +338,7 @@ const ChatInterface: React.FC = () => {
                             }
                             return <div className={className} {...props}>{children}</div>
                           },
-                          code: ({node, inline, ...props}) => 
+                          code: ({node, inline, ...props}: any) => 
                             inline 
                               ? <code className="bg-slate-100 px-1.5 py-0.5 rounded-md text-slate-800 font-mono text-[13px] border border-slate-200" {...props} />
                               : <code className="block bg-slate-900 text-slate-300 p-6 rounded-2xl font-mono text-sm overflow-x-auto shadow-2xl my-6" {...props} />
