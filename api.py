@@ -13,12 +13,10 @@ app = FastAPI()
 
 import os
 
-# Enable CORS for the Astro frontend
-raw_origins = os.environ.get("ALLOWED_ORIGINS", "*").split(",")
-allowed_origins = [origin.strip().rstrip("/") if origin.strip() != "*" else "*" for origin in raw_origins]
+# Enable CORS for all domains since we don't use credentials
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=["*"],
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
