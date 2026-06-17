@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MODEL_NAME = os.environ.get("GOOGLE_MODEL", "gemini-2.5-flash")
+MODEL_NAME = os.environ.get("GOOGLE_MODEL", "gemini-1.5-flash")
 TEMPERATURE = float(os.environ.get("MODEL_TEMPERATURE", "0.4"))
 
 def convert_to_desmos_syntax(equation: str) -> str:

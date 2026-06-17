@@ -7,7 +7,7 @@ import json
 
 from logic import app as langgraph_app, convert_to_desmos_syntax
 from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
-from supabase_client import save_chat, load_chat, delete_chat, get_all_chat_summaries
+from supabase_client import save_chat, load_chat, delete_chat, get_all_chat_summaries, supabase
 
 app = FastAPI()
 
@@ -34,6 +34,10 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     bot_response: str
     plot_equations: Optional[List[str]] = None
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "supabase": supabase is not None}
 
 @app.get("/api/chats")
 async def get_chats():

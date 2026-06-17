@@ -15,7 +15,7 @@ This guide explains how to deploy the RootEd application using a hybrid stack: *
     *   `SUPABASE_URL`: Your Supabase project URL.
     *   `SUPABASE_KEY`: Your Supabase anon/service key.
     *   `ALLOWED_ORIGINS`: Set this to your Vercel URL once deployed (e.g., `https://rooted-ai.vercel.app`).
-    *   `GOOGLE_MODEL`: `gemini-2.5-flash` (or your preferred model).
+    *   `GOOGLE_MODEL`: `gemini-1.5-flash` (or your preferred model).
 
 ---
 

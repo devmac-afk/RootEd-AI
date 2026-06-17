@@ -22,7 +22,7 @@ const ThinkingIndicator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const allLogs = [
     "Analyzing semantic structure...",
-    "Querying Gemini-2.5-Flash...",
+    "Querying Gemini-1.5-Flash...",
     "Parsing LaTeX mappings...",
     "Computing logic steps...",
     "Optimizing constraints...",
@@ -238,7 +238,7 @@ const ChatInterface: React.FC = () => {
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground leading-relaxed font-medium">
-            Core G2.5-F stabilized. Ready for recursive parsing.
+            Core G1.5-F stabilized. Ready for recursive parsing.
           </p>
         </div>
       </div>
@@ -425,7 +425,7 @@ const ChatInterface: React.FC = () => {
           </form>
           <div className="flex justify-center items-center mt-6 space-x-6">
              <div className="flex items-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
-               <span className="h-1 w-1 bg-primary rounded-full mr-2"></span> Math-Engine: G2.5-F
+               <span className="h-1 w-1 bg-primary rounded-full mr-2"></span> Math-Engine: G1.5-F
              </div>
              <div className="flex items-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
                <span className="h-1 w-1 bg-emerald-500 rounded-full mr-2"></span> Logic-Core: Stabilized
