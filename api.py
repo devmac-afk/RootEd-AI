@@ -35,6 +35,17 @@ class ChatResponse(BaseModel):
     bot_response: str
     plot_equations: Optional[List[str]] = None
 
+def extract_text_content(content):
+    """Normalizes AIMessage content to a string."""
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, list):
+        return "".join(
+            part.get("text", "") for part in content 
+            if isinstance(part, dict) and part.get("type") == "text"
+        )
+    return str(content) if content is not None else ""
+
 @app.get("/api/health")
 async def health_check():
     return {"status": "ok", "supabase": supabase is not None}
@@ -46,6 +57,10 @@ async def get_chats():
 @app.get("/api/chats/{chat_id}")
 async def get_chat_history(chat_id: str):
     history = load_chat(chat_id)
+    # Ensure all bot responses in history are strings (normalizing legacy list content)
+    for turn in history:
+        if "bot" in turn:
+            turn["bot"] = extract_text_content(turn["bot"])
     return history
 
 @app.post("/api/chat", response_model=ChatResponse)
@@ -55,12 +70,12 @@ async def chat_endpoint(request: ChatRequest):
         history = load_chat(request.chat_id)
         messages = []
         for turn in history:
-            if turn.get('user'):
-                messages.append(HumanMessage(content=turn.get('user')))
-            if turn.get('bot'):
+            if turn.get("user"):
+                messages.append(HumanMessage(content=turn.get("user")))
+            if turn.get("bot"):
                 # Note: If we want to be very precise, we should reconstruct tool calls here too
                 # but for most history, just the text bot response is enough for context.
-                messages.append(AIMessage(content=turn.get('bot')))
+                messages.append(AIMessage(content=turn.get("bot")))
         
         # 2. Add the new user message
         messages.append(HumanMessage(content=request.message))
@@ -76,16 +91,17 @@ async def chat_endpoint(request: ChatRequest):
         plot_equations = []
         
         # We iterate backwards to find the final text answer and all tool calls in the last exchange
-        for msg in reversed(final_state['messages']):
+        for msg in reversed(final_state["messages"]):
             if isinstance(msg, AIMessage):
                 if not bot_response and msg.content:
-                    bot_response = msg.content
+                    bot_response = extract_text_content(msg.content)
+                
                 if msg.tool_calls:
                     for tool_call in msg.tool_calls:
-                        if tool_call['name'] == 'plot_graph':
+                        if tool_call["name"] == "plot_graph":
                             # Apply desmos syntax conversion just in case, 
                             # though the tool already does it, it's safer to extract fresh
-                            eqs = tool_call['args'].get('equations', [])
+                            eqs = tool_call["args"].get("equations", [])
                             plot_equations.extend([convert_to_desmos_syntax(eq) for eq in eqs])
             
             # Stop once we hit the user message we just sent
